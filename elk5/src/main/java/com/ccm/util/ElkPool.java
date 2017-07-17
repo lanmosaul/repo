@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 public class ElkPool {
 	@Resource
 	private ElkPoolConfig elkPoolConfig;
-	private Map<TransportClient, Date> occupiedTransportClientMap = new ConcurrentHashMap<TransportClient, Date>();
+	private Map<TransportClient, Date> timeoutTransportClientMap = new ConcurrentHashMap<TransportClient, Date>();
 
 	private BlockingQueue<TransportClient> cacheClientQueue = null;
 	@PostConstruct
@@ -35,17 +35,30 @@ public class ElkPool {
 				TransportClient client = new PreBuiltTransportClient(settings).addTransportAddress(
 						new InetSocketTransportAddress(InetAddress.getByName(elkPoolConfig.getNodes_config()), 9300));
 				cacheClientQueue.put(client);
-				occupiedTransportClientMap.put(client, new Date());
+				timeoutTransportClientMap.put(client, new Date());
 			}
 		}
 		System.out.print("end of init");
 	}
 
 	public TransportClient getTransportClientFromPool(){
-		TransportClient client = cacheClientQueue.poll();
-		if (client == null) {
+		System.out.println("pool size"+cacheClientQueue.size());
+		TransportClient client= cacheClientQueue.poll();
+		if(client!=null){
+			Date createdDate=timeoutTransportClientMap.get(client);
+			long curTime = System.currentTimeMillis();
+			long timeInterval = curTime - createdDate.getTime();
+			//timeout
+			if (timeInterval >= elkPoolConfig.getTimemout()) {
+				timeoutTransportClientMap.remove(client);
+				client.close();
+				System.out.println("remove client "+client.hashCode()+" with timeout");
+				return getTransportClientFromPool();
+			}
+			return client;
+		}else{
 			// TODO Auto-generated catch block
-			if (occupiedTransportClientMap.size() < elkPoolConfig.getMax_client()) {
+			if (timeoutTransportClientMap.size() < elkPoolConfig.getMax_client()) {
 				Settings settings = Settings.builder().put("cluster.name", elkPoolConfig.getCluster_name()).build();
 				try {
 					client = new PreBuiltTransportClient(settings).addTransportAddress(
@@ -54,58 +67,33 @@ public class ElkPool {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				occupiedTransportClientMap.put(client, new Date());
+				timeoutTransportClientMap.put(client, new Date());
+				System.out.println("put new client "+client.hashCode()+" in the queue");
 				return client;
 			} else {
 				return null;
 			}
 		}
-		return client;
 	}
 
 	public void releaseTransportClient(TransportClient client){
-		occupiedTransportClientMap.remove(client);
-		try {
-			cacheClientQueue.put(client);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	private void  handleTimeOut(){
-		System.out.println("before cacheClientQueue==>"+cacheClientQueue.size());
-		System.out.println("before occupiedClient==>"+occupiedTransportClientMap.size());
-		Iterator<Map.Entry<TransportClient, Date>> it = occupiedTransportClientMap.entrySet().iterator();
-		while (it.hasNext()) {
-			Map.Entry<TransportClient, Date> entry = it.next();
-			TransportClient tc = entry.getKey();
-			Date createdDate = entry.getValue();
-			long curTime = System.currentTimeMillis();
-			long timeInterval = curTime - createdDate.getTime();
-			if (timeInterval >= elkPoolConfig.getTimemout()) {
-				System.out.println("remove client@"+tc.hashCode());
-				cacheClientQueue.remove(tc);
-				tc.close();
-				it.remove();
+		Date createdDate=timeoutTransportClientMap.get(client);
+		long curTime = System.currentTimeMillis();
+		long timeInterval = curTime - createdDate.getTime();
+		//timeout
+		if (timeInterval >= elkPoolConfig.getTimemout()) {
+			timeoutTransportClientMap.remove(client);
+			client.close();
+			System.out.println("remove client "+client.hashCode()+" with timeout");
+		}else{
+			try {
+				cacheClientQueue.put(client);
+				System.out.println("put old client "+client.hashCode()+" in the queue");
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
-		System.out.println("after cacheClientQueue==>"+cacheClientQueue.size());
-		System.out.println("after occupiedClient==>"+occupiedTransportClientMap.size());
 	}
-//	@PostConstruct
-	private void monitorTimeOut() {
-		Thread t = new Thread(new Runnable() {
-			public void run() {
-				try {
-					Thread.currentThread().sleep(60000);
-				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				handleTimeOut();
-			}
-		});
-		t.start();
-		
-	}
+
 }
