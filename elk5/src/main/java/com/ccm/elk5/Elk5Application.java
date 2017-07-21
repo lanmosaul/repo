@@ -14,10 +14,10 @@ import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 
-import com.ccm.dao.ElkQueryDao;
+import com.ccm.dao.elk.ElkQueryDao;
 import com.ccm.util.ElkParam;
 @SpringBootApplication
-@ComponentScan(basePackages = {"com.ccm.dao","com.ccm.util"})
+@ComponentScan(basePackages = {"com.ccm.dao.mongo","com.ccm.dao.elk","com.ccm.util"})
 public class Elk5Application implements CommandLineRunner{
 	
 	public static void main(String[] args) throws UnknownHostException {

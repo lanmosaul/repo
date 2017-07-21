@@ -1,4 +1,4 @@
-package com.ccm.dao;
+package com.ccm.dao.elk;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;

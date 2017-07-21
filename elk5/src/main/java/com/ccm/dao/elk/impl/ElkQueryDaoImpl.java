@@ -1,4 +1,4 @@
-package com.ccm.dao.impl;
+package com.ccm.dao.elk.impl;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -35,7 +35,7 @@ import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.stereotype.Repository;
 
-import com.ccm.dao.ElkQueryDao;
+import com.ccm.dao.elk.ElkQueryDao;
 import com.ccm.util.ElkPool;
 
 @Repository("elkQueryDao")
