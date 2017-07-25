@@ -69,6 +69,9 @@ AdsManager {
 		return adsRes;
 	}
 
+	
+	
+	
 	private Query buildQuery(AdsLogMessageCriteria amc) {
 		Query query = new Query();
 		if (CommonUtil.isNotEmpty(amc.getHotelCode())) {
@@ -120,8 +123,6 @@ AdsManager {
 		}
 		if (CommonUtil.isNotEmpty(amc.getSortBy())) {
 			query.with(new Sort(amc.ASC.equalsIgnoreCase(amc.getDesc()) ? Sort.Direction.ASC : Sort.Direction.DESC, amc.getSortBy()));
-		} else {
-			query.with(new Sort(Sort.Direction.DESC, "createdTime"));
 		}
 		return query;
 	}

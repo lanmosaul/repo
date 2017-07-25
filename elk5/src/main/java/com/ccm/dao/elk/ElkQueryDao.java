@@ -6,11 +6,14 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.elasticsearch.action.delete.DeleteResponse;
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.search.sort.SortOrder;
+
+import com.ccm.model.ads.AdsMessage;
 
 public interface ElkQueryDao {
 	public  BoolQueryBuilder initMulitQueryBuilder();
@@ -36,6 +39,7 @@ public interface ElkQueryDao {
 	//save json
 	public void postObjectList(String indexName,String typeName,List<?>objectList);
 	
+	public void postAdsMessage(String indexName,List<AdsMessage> msgList);
 	//save json
 	public void postJsonList(String indexName,String typeName,List<String>jsonList);
 	
@@ -55,4 +59,6 @@ public interface ElkQueryDao {
 	public long removeDataBySimpleEqualsField(String indexName,String fieldName,Object fieldValue);
 	
 	public long removeDataByMultiEqualsField(String indexName,Map<String,?>conditionMap,String conditionType) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException;
+
+	public void postBulkData(List<IndexRequestBuilder> irbList);
 }

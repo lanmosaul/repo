@@ -3,15 +3,16 @@ package com.ccm.model.ads;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.data.annotation.Id;
 import com.ccm.common.Column;
-import com.ccm.model.base.BaseObject;
+import com.ccm.model.base.BaseObject2;
 
 /**
  * 接收ads推送消息类
  */
-public class AdsMessage extends BaseObject {
+public class AdsMessage extends BaseObject2 {
 
     private static final long serialVersionUID = 2241610909495825852L;
     @Id
@@ -71,6 +72,55 @@ public class AdsMessage extends BaseObject {
     
     private static HashMap<String,HashMap<String,String>> chainMap = new HashMap<String, HashMap<String,String>>();
     
+    public static Map<String,Object> convertToMap(AdsMessage msg){
+    	Map<String,Object> msgMap=new HashMap<String,Object>();
+    	msgMap.put("adsId", msg.getAdsId());
+    	if(msg.getAcceptStatus()!=null)
+    		msgMap.put("acceptStatus", msg.getAcceptStatus());
+    	if(msg.getTargetGDS()!=null)
+    		msgMap.put("targetGDS", msg.getTargetGDS());
+    	if(msg.getAdsType()!=null)
+    		msgMap.put("adsType", msg.getAdsType());
+    	if(msg.getChainCode()!=null)
+    		msgMap.put("chainCode", msg.getChainCode());
+    	if(msg.getHotelCode()!=null)
+    		msgMap.put("hotelCode", msg.getHotelCode());
+    	if(msg.getRoomTypeCode()!=null)
+    		msgMap.put("roomTypeCode", msg.getRoomTypeCode());
+    	if(msg.getRatePlanCode()!=null)
+    		msgMap.put("ratePlanCode", msg.getRatePlanCode());
+    	if(msg.getRoomAvailable()!=null)
+    		msgMap.put("roomAvailable", msg.getRoomAvailable());
+    	if(msg.getPrice()!=null)
+    		msgMap.put("price", msg.getPrice());
+    	if(msg.getOnOff()!=null)
+    		msgMap.put("onOff", msg.getOnOff());
+     	if(msg.getStatus()!=null)
+    		msgMap.put("status", msg.getStatus());
+    	if(msg.getTbStatus()!=null)
+    		msgMap.put("tbStatus", msg.getTbStatus());
+    	if(msg.getDates()!=null)
+    		msgMap.put("dates", msg.getDates());
+    	if(msg.getEchoToken()!=null)
+    		msgMap.put("echoToken", msg.getEchoToken());
+    	if(msg.getCreatedTime()!=null)
+    		msgMap.put("createdTime", msg.getCreatedTime());
+    	if(msg.getCreatedDate()!=null)
+    		msgMap.put("createdDate", msg.getCreatedDate());
+    	if(msg.getErrMsg()!=null)
+    		msgMap.put("errMsg", msg.getErrMsg());
+    	if(msg.getDetail()!=null)
+    		msgMap.put("detail", msg.getDetail());
+    	if(msg.getContent()!=null)
+    		msgMap.put("content", msg.getContent());
+    	if(msg.getTbExecErrMsg()!=null)
+    		msgMap.put("tbExecErrMsg", msg.getTbExecErrMsg());
+    	if(msg.getIsRate()!=null)
+    		msgMap.put("isRate", msg.getIsRate());
+    	if(msg.getCurrencyCode()!=null)
+    		msgMap.put("currencyCode", msg.getCurrencyCode());
+    	return msgMap;
+    }
     
     
     public String getAcceptStatus() {

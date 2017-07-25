@@ -2,6 +2,7 @@ package com.ccm.dao.elk.impl;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -11,12 +12,17 @@ import java.util.concurrent.ExecutionException;
 
 import javax.annotation.Resource;
 
+import org.apache.commons.beanutils.BeanMap;
+import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.elasticsearch.action.ListenableActionFuture;
+import org.elasticsearch.action.bulk.BulkRequestBuilder;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequestBuilder;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
@@ -36,6 +42,7 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.stereotype.Repository;
 
 import com.ccm.dao.elk.ElkQueryDao;
+import com.ccm.model.ads.AdsMessage;
 import com.ccm.util.ElkPool;
 
 @Repository("elkQueryDao")
@@ -128,6 +135,50 @@ public class ElkQueryDaoImpl implements ElkQueryDao{
 	}
 	
 	//save json
+	public void postAdsMessage(String indexName,List <AdsMessage>msgList){
+		TransportClient client=elkPool.getTransportClientFromPool();	
+		for(AdsMessage msg:msgList){
+			Map <String,Object> msgMap=AdsMessage.convertToMap(msg);
+			IndexResponse response = client.prepareIndex(indexName.toLowerCase(),msg.getCreatedDate().toLowerCase(),msg.getAdsId()).setSource(msgMap).get();
+			String _index = response.getIndex();
+			// Type name
+			String _type = response.getType();
+			// Document ID (generated or not)
+			String _id = response.getId();
+			// Version (if it's the first time you index this document, you will get: 1)
+			long _version = response.getVersion();
+			// status has stored current instance statement.
+			RestStatus _status = response.status();
+			//log.info("postJson {index="+_index+",type="+_type+",id="+_id+",status="+_status+",version="+_version+"}");
+		}
+		elkPool.releaseTransportClient(client);
+	}
+	
+	public void postBulkAdsMessage(String indexName,List <AdsMessage>msgList){
+		TransportClient client=elkPool.getTransportClientFromPool();	
+		List<IndexRequestBuilder> irbList=new ArrayList<IndexRequestBuilder>();
+		for(AdsMessage msg:msgList){
+			Map <String,Object> msgMap=AdsMessage.convertToMap(msg);
+			irbList.add(client.prepareIndex(indexName.toLowerCase(),msg.getCreatedDate().toLowerCase(),msg.getAdsId()).setSource(msgMap));
+		}
+		postBulkData(client,irbList);
+		elkPool.releaseTransportClient(client);
+			/*
+				String _index = response.getIndex();
+				// Type name
+				String _type = response.getType();
+				// Document ID (generated or not)
+				String _id = response.getId();
+				// Version (if it's the first time you index this document, you will get: 1)
+				long _version = response.getVersion();
+				// status has stored current instance statement.
+				RestStatus _status = response.status();
+				//log.info("postJson {index="+_index+",type="+_type+",id="+_id+",status="+_status+",version="+_version+"}");
+			*/
+		}
+	}
+	
+	//save json
 	public void postJsonList(String indexName,String typeName,List<String>jsonList){
 		//application/json
 		TransportClient client=elkPool.getTransportClientFromPool();	
@@ -211,6 +262,7 @@ public class ElkQueryDaoImpl implements ElkQueryDao{
 	public DeleteResponse removeDataById(String indexName,String typeName,String docId){
 		TransportClient client=elkPool.getTransportClientFromPool();	
 		DeleteResponse response = client.prepareDelete(indexName,typeName,docId).get();
+		elkPool.releaseTransportClient(client);
 		return response;
 	}
 	
@@ -222,7 +274,9 @@ public class ElkQueryDaoImpl implements ElkQueryDao{
 			        .filter(QueryBuilders.termQuery(fieldName,fieldValue)) 
 			        .source(indexName)                                  
 			        .get();                                             
-		return response.getDeleted();    
+		long result=response.getDeleted();
+		elkPool.releaseTransportClient(client);
+		return result;
 	}
 	
 	public long removeDataByMultiEqualsField(String indexName,Map<String,?>conditionMap,String conditionType) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException{
@@ -232,8 +286,21 @@ public class ElkQueryDaoImpl implements ElkQueryDao{
 			        .filter(composeEqualCondtionWithMulitQuery(null,conditionMap,conditionType)) 
 			        .source(indexName)                                  
 			        .get();                                             
-			return response.getDeleted();    
+		long result=response.getDeleted(); 
+		elkPool.releaseTransportClient(client);
+		return result;
 	}
 	
+	public void postBulkData(TransportClient client,List<IndexRequestBuilder> irbList){
+		BulkRequestBuilder bulkRequest = client.prepareBulk();
+		for(IndexRequestBuilder irb:irbList){
+			bulkRequest.add(irb);
+			}
+		BulkResponse bulkResponse = bulkRequest.get();
+		if (bulkResponse.hasFailures()) {
+		    // process failures by iterating through each bulk response item
+			System.out.println("bulk add error");
+		}
+	}
 	
 }
