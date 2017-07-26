@@ -60,5 +60,9 @@ public interface ElkQueryDao {
 	
 	public long removeDataByMultiEqualsField(String indexName,Map<String,?>conditionMap,String conditionType) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException;
 
-	public void postBulkData(List<IndexRequestBuilder> irbList);
+	public void postBulkData(TransportClient client,List<IndexRequestBuilder> irbList);
+	
+	public void postBulkAdsMessage(String indexName,List <AdsMessage>msgList);
+	
+	public void getAggregationData(String indexName,String typeName,String parentBucketField);
 }

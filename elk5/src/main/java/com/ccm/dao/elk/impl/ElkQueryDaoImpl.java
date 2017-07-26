@@ -38,9 +38,16 @@ import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.DeleteByQueryAction;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.aggregations.AggregationBuilder;
+import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.filters.Filters;
+import org.elasticsearch.search.aggregations.bucket.filters.FiltersAggregator;
+import org.elasticsearch.search.aggregations.bucket.filters.FiltersAggregator.KeyedFilter;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.stereotype.Repository;
-
+import org.elasticsearch.search.aggregations.bucket.filter.Filter;
 import com.ccm.dao.elk.ElkQueryDao;
 import com.ccm.model.ads.AdsMessage;
 import com.ccm.util.ElkPool;
@@ -163,19 +170,6 @@ public class ElkQueryDaoImpl implements ElkQueryDao{
 		}
 		postBulkData(client,irbList);
 		elkPool.releaseTransportClient(client);
-			/*
-				String _index = response.getIndex();
-				// Type name
-				String _type = response.getType();
-				// Document ID (generated or not)
-				String _id = response.getId();
-				// Version (if it's the first time you index this document, you will get: 1)
-				long _version = response.getVersion();
-				// status has stored current instance statement.
-				RestStatus _status = response.status();
-				//log.info("postJson {index="+_index+",type="+_type+",id="+_id+",status="+_status+",version="+_version+"}");
-			*/
-		}
 	}
 	
 	//save json
@@ -289,6 +283,55 @@ public class ElkQueryDaoImpl implements ElkQueryDao{
 		long result=response.getDeleted(); 
 		elkPool.releaseTransportClient(client);
 		return result;
+	}
+	
+	public void searchOfFilterAggreator(String indexName,String typeName,String aggreatorName,String field,Object value){
+		TransportClient client=elkPool.getTransportClientFromPool();
+		AggregationBuilder aggregationBuilder =
+			    AggregationBuilders.filter(aggreatorName,QueryBuilders.termQuery(field,value));
+		SearchResponse sr = client.prepareSearch(indexName)
+		 		.setTypes(typeName).addAggregation(aggregationBuilder).execute().actionGet();
+		Filter agg = sr.getAggregations().get(aggreatorName);
+		agg.getDocCount(); // Doc count
+		elkPool.releaseTransportClient(client);
+	}
+	
+	public void searchOfFiltersAggreator(String indexName,String typeName,String aggreatorName,KeyedFilter... keyedFilters){
+		TransportClient client=elkPool.getTransportClientFromPool();
+		AggregationBuilder aggregationBuilder =
+			    AggregationBuilders.filters(aggreatorName,keyedFilters);
+		SearchResponse sr = client.prepareSearch(indexName)
+		 		.setTypes(typeName).addAggregation(aggregationBuilder).execute().actionGet();
+		Filters agg = sr.getAggregations().get(aggreatorName);
+		// For each entry
+		for (Filters.Bucket entry : agg.getBuckets()) {
+		    String key = entry.getKeyAsString();            // bucket key
+		    long docCount = entry.getDocCount();            // Doc count
+		    System.out.println("key [{"+key+"}], doc_count [{"+docCount+"}]");
+		}
+		elkPool.releaseTransportClient(client);
+	}
+	
+	public KeyedFilter[] keyFiltersBuilder(Map<String,Object>fieldMap){
+		List<KeyedFilter> keyedFilterList=new ArrayList<KeyedFilter>();
+		for(Map.Entry<String,Object> entry:fieldMap.entrySet()){
+			keyedFilterList.add(new FiltersAggregator.KeyedFilter(entry.getKey(), QueryBuilders.termQuery(entry.getKey(),entry.getValue())));
+		}
+		return keyedFilterList.toArray(new KeyedFilter[]{});
+	}
+	
+	public void getAggregationData(String indexName,String typeName,String parentBucketField){
+		//parent bucket
+		TransportClient client=elkPool.getTransportClientFromPool();
+		TermsAggregationBuilder termsAggregationBuilder=AggregationBuilders.terms("by_"+parentBucketField).field(parentBucketField);
+		SearchResponse sr = client.prepareSearch(indexName)
+		 		.setTypes(typeName).addAggregation(termsAggregationBuilder).execute().actionGet();
+		Terms tremResult  = sr.getAggregations().get("by_"+parentBucketField);
+		// For each entry
+		for (Terms.Bucket entry : tremResult.getBuckets()) {
+		    System.out.print("key:=>"+entry.getKey()+";doc count="+entry.getDocCount()); // Doc count
+		}
+		elkPool.releaseTransportClient(client);
 	}
 	
 	public void postBulkData(TransportClient client,List<IndexRequestBuilder> irbList){

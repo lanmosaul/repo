@@ -58,6 +58,22 @@ public class Elk5Application implements CommandLineRunner{
 //		elkQueryDao.getDataById("dept", "employee", "AV0wmEh5X8uqqMmcr1nw");
 	}
 	
+	private void getAggLog(String indexName,String typeName,String groupField)throws ParseException{
+		elkQueryDao.getAggregationData(indexName, typeName, groupField);
+	}
+	
+	private void insertBulkAdsLog() throws ParseException{
+		int recyclePages=147267;
+		int pageSize = 100;// this.getCurrentPageSize("adsMsg");
+		for(int pageNo=1;pageNo<=recyclePages;pageNo++){
+		AdsLogMessageCriteria amc = new AdsLogMessageCriteria();
+		amc.setPageNum(pageNo);
+		amc.setPageSize(pageSize);
+		AdsMessageResult result=adsMongonManager.searchAdsLog(amc);
+		System.out.println("total data size=>"+result.getTotalCount()+",current pageNo"+pageNo);
+		elkQueryDao.postBulkAdsMessage("adsMessage",result.getResultList());
+		}
+	}
 	private void insertAdsLog() throws ParseException{
 		int recyclePages=147267;
 		int pageSize = 100;// this.getCurrentPageSize("adsMsg");
@@ -82,9 +98,11 @@ public class Elk5Application implements CommandLineRunner{
 		// TODO Auto-generated method stub
 		//"dept", "employee", "AV0wmEh5X8uqqMmcr1nw"
 		System.out.println("begin");
+		insertBulkAdsLog();
+		//getAggLog("adsmessage","2017-04-14","chainCode");
 //		getAdsLog();
 //		removeAdsMsgs("AV1zofg0FMcRxcKExZPX","AV1zogg9FMcRxcKExZPY");
-		insertAdsLog();
+//		insertAdsLog();
 		System.out.println("end");
 
 	}
